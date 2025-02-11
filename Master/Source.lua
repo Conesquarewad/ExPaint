@@ -1,6 +1,7 @@
 -- Service
 
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterGui = game:GetService("StarterGui")
@@ -16,7 +17,7 @@ local Option = {
 		Bigger = 32,
 		Default = 24,
 		Small = 14
-	},w
+	},
 
 	Easing = {
 		Slow = TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.In),
@@ -39,9 +40,9 @@ local Option = {
 
 		Outline = Color3.fromRGB(28, 29, 30)
 	},
-
-	Default = Color3.fromRGB(63, 72, 204)
 }
+
+local Current = Color3.fromRGB(255, 0, 0)
 
 local Connector = {}
 local Session
@@ -56,7 +57,7 @@ type Element = {
 local Elements = {
 	["Button"] = {
 		Class = "Button",
-		
+
 		Created = function(Argument : { any })
 			local Text = Argument[1] or "Button"
 			local Animated = Argument[2] or true
@@ -105,10 +106,10 @@ local Elements = {
 			return Button
 		end
 	} :: Element,
-	
+
 	["Label"] = {
 		Class = "Label",
-		
+
 		Created = function(Argument : {any})
 			local Text = Argument[1] or "Foo bar baz"
 			local Dimmed = Argument[2] or false
@@ -160,7 +161,7 @@ local Elements = {
 	} :: Element,
 	["Field"] = {
 		Class = "Field",
-		
+
 		Created = function(Argument : {any})
 			local Text = Argument[1] or "Foo bar baz"
 			local Placeholder = Argument[2] or ""
@@ -203,26 +204,26 @@ local Elements = {
 			Update()
 
 			Field:GetPropertyChangedSignal("Interactable"):Connect(Update)
-			
+
 			return Field
 		end,
 	} :: Element,
-	
+
 	["Dashboard"] = {
 		Class = "Dashboard",
-		
+
 		Created = function(Argument : {any})
 			local function CreateTextsize(Size : number)
 				local Scale = Instance.new("UITextSizeConstraint")
 				Scale.Name = "Limit"
 				Scale.MaxTextSize = Size
-				
+
 				return Scale
 			end
-			
+
 			local Title = Argument[1] or "<b><i>Ex</i></b>Painter"
 			local Size = Argument[2] or Vector2.new(300, 200)
-			
+
 			local Main = Instance.new("Frame")
 			Main.Name = "Dashboard"
 			Main.BackgroundColor3 = Option.Palette.Background
@@ -231,7 +232,7 @@ local Elements = {
 			Main.Size = UDim2.fromOffset( Size.X, Size.Y )
 			Main.AnchorPoint = Vector2.new(0, 0.5)
 			Main.Position = UDim2.fromScale(0, 0.5)
-			
+
 			local Outline = Instance.new("UIStroke")
 			Outline.Name = "Outline"
 			Outline.Color = Option.Palette.Outline
@@ -240,7 +241,7 @@ local Elements = {
 			Outline.Thickness = 1
 			Outline.Transparency = 0.75
 			Outline.Parent = Main
-			
+
 			local Titlebar = Instance.new("TextLabel")
 			Titlebar.Name = "Titlebar"
 			Titlebar.Font = Option.Standard
@@ -255,9 +256,9 @@ local Elements = {
 			Titlebar.Size = UDim2.new(1, 0, 0, 32)
 			Titlebar.ZIndex = 2
 			Titlebar.Parent = Main
-			
+
 			CreateTextsize( Option.Scale.Default ).Parent = Titlebar
-			
+
 			do
 				local Padding = Instance.new("UIPadding")
 				Padding.PaddingBottom = UDim.new(0, 5)
@@ -265,7 +266,7 @@ local Elements = {
 				Padding.PaddingRight = UDim.new(0, 5)
 				Padding.PaddingTop = UDim.new(0, 5)
 				Padding.Parent = Titlebar
-				
+
 				local VersionLabel = Instance.new("TextLabel")
 				VersionLabel.Name = "Version"
 				VersionLabel.Font = Option.Standard
@@ -282,10 +283,10 @@ local Elements = {
 				VersionLabel.Position = UDim2.new(1, 5, 0, -5)
 				VersionLabel.Size = UDim2.fromOffset(32, 32)
 				VersionLabel.Parent = Titlebar
-				
+
 				CreateTextsize( Option.Scale.Small ).Parent = VersionLabel
 			end
-			
+
 			local Sidebar = Instance.new("Frame")
 			Sidebar.Name = "Sidebar"
 			Sidebar.BackgroundColor3 = Option.Palette.Sidebar
@@ -296,7 +297,7 @@ local Elements = {
 			Sidebar.AnchorPoint = Vector2.new(1, 0)
 			Sidebar.ZIndex = 2
 			Sidebar.Parent = Main
-			
+
 			do
 				local List = Instance.new("UIListLayout")
 				List.Name = "List"
@@ -306,7 +307,7 @@ local Elements = {
 				List.VerticalAlignment = Enum.VerticalAlignment.Top
 				List.Parent = Sidebar
 			end
-			
+
 			local Display = Instance.new("Frame")
 			Display.Name = "Display"
 			Display.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -317,9 +318,31 @@ local Elements = {
 			Display.BackgroundTransparency = 1
 			Display.AnchorPoint = Vector2.new(0, 1)
 			Display.Parent = Main
-			
+
 			return Main
 		end
+	} :: Element,
+
+	["Box"] = {
+		Class = "Box",
+
+		Created = function(Argument : {any})
+			local Target = Argument[1] or nil
+			local Thickness = Argument[2] or 0.05
+			local LineColor = Argument[3] or Color3.fromRGB(13, 105, 172)
+			local SurfaceColor = Argument[4] or Color3.fromRGB(13, 105, 172)
+
+			local Selection = Instance.new("SelectionBox")
+			Selection.Name = "Selection"
+			Selection.Transparency = 0
+			Selection.SurfaceTransparency = 1
+			Selection.Color3 = LineColor
+			Selection.SurfaceColor3 = SurfaceColor
+			Selection.LineThickness = Thickness
+			Selection.Adornee = Target
+
+			return Selection
+		end,
 	} :: Element
 }
 
@@ -329,28 +352,28 @@ local function Register(Type : string, ...)
 
 	for _, Registry in pairs( Elements ) do
 		local Class, Created = Registry.Class, Registry.Created
-		
+
 		if Class and Created then
-			
+
 			if string.lower( Type ) == string.lower( Class )  then
 				Result = Registry
-				
+
 				break
 			else
 				Result = nil :: never
 			end
 		end
 	end
-	
+
 	if Result then
 		local Created = Result["Created"]
-		
+
 		if Created and typeof(Created) == "function" then
 			return Created(Argument) :: Instance
 		end
 	else
 		warn("Invaild type")
-		
+
 		return
 	end
 end
@@ -419,6 +442,41 @@ local function HasAccessCoreGui()
 	end
 end
 
+local function HasTool()
+	local Character = Player.Character or Player.CharacterAdded:Wait()
+
+	if Character then
+
+		if Character:FindFirstChildOfClass("Tool") then
+			return true
+		else
+			return false
+		end
+	else
+		return false
+	end
+end
+
+local function Cast(Distance : number, Param : RaycastParams)
+	local Camera = workspace.CurrentCamera
+
+	if Camera then
+		local Mouse = UserInputService:GetMouseLocation()
+		local Unit = Camera:ViewportPointToRay( Mouse.X, Mouse.Y )
+
+		local Raycast = workspace:Raycast( Unit.Origin, Unit.Origin + (Unit.Direction * Distance), Param )
+		local Position = Unit.Origin + (Unit.Direction * Distance)
+
+		if Raycast then
+			Position = Raycast.Position
+
+			return Position, Raycast
+		else
+			return Position, nil
+		end
+	end
+end
+
 -- Master
 
 local function Init()
@@ -433,6 +491,12 @@ local function Init()
 			end
 		end
 
+		local function Notify(Message : string, Tittle : string)
+			StarterGui:SetCore("SendNotification", {
+				Title = Tittle,
+				Text = Message
+			})
+		end
 
 		local function FindSession()
 			return Root:FindFirstChild( ("__EXPAINTER_%d__"):format(Player.UserId) )
@@ -447,72 +511,259 @@ local function Init()
 				local Ratio = Instance.new("UIAspectRatioConstraint")
 				Ratio.Name = "Ratio"
 				Ratio.AspectRatio = 1
-				
+
 				return Ratio
 			end
-			
+
 			Session = Instance.new("ScreenGui")
 			Session.Name = ("__EXPAINTER_%d__"):format(Player.UserId)
 			Session.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 			Session.IgnoreGuiInset = false
 			Session.ResetOnSpawn = false
 			Session.DisplayOrder = 10
-			
-			local Toggle = true
-			
+
 			local Main = Register("Dashboard")
 			Main.Parent = Session
-			
-			local Visibility = Register("Button", "<", false)
-			Visibility.Name = "Visibility"
-			Visibility.BackgroundTransparency = 1
-			Visibility.Size = UDim2.fromScale(1, 1)
-			
-			Square().Parent = Visibility
-			
-			Visibility.Parent = Main.Sidebar
-			
-			local function Update()
-				
-				Visibility.Interactable = false
-				
-				if Toggle then
-					Visibility.Text = ">"
-					
-					local Tween = TweenService:Create(Main, Option.Easing.Medium, {
-						AnchorPoint = Vector2.new(1, 0.5),
-						Position = UDim2.new(0, 32, 0.5, 0)
-					} )
-					
-					Tween:Play()
-					Tween.Completed:Wait()
-				else
-					Visibility.Text = "<"
-					
-					local Tween = TweenService:Create(Main, Option.Easing.Medium, {
-						AnchorPoint = Vector2.new(0, 0.5),
-						Position = UDim2.new(0, 5, 0.5, 0)
-					} )
-					
-					
-					Tween:Play()
-					Tween.Completed:Wait()
+
+			local Activated = false
+
+			local Display = Main:FindFirstChild("Display")
+
+			local function CreateVisibility()
+				Main:SetAttribute("Toggle", true)
+
+				local Visibility = Register("Button", "<", false) :: TextButton
+				Visibility.Name = "Visibility"
+				Visibility.BackgroundTransparency = 1
+				Visibility.Size = UDim2.fromScale(1, 1)
+
+				Square().Parent = Visibility
+
+				Visibility.Parent = Main.Sidebar
+
+				local function Update()
+
+					Visibility.Interactable = false
+
+					if Main:GetAttribute("Toggle") then
+						Visibility.Text = ">"
+
+						local Tween = TweenService:Create(Main, Option.Easing.Medium, {
+							AnchorPoint = Vector2.new(1, 0.5),
+							Position = UDim2.new(0, 32, 0.5, 0)
+						} )
+
+						Tween:Play()
+						Tween.Completed:Wait()
+					else
+						Visibility.Text = "<"
+
+						local Tween = TweenService:Create(Main, Option.Easing.Medium, {
+							AnchorPoint = Vector2.new(0, 0.5),
+							Position = UDim2.new(0, 5, 0.5, 0)
+						} )
+
+
+						Tween:Play()
+						Tween.Completed:Wait()
+					end
+
+					Visibility.Interactable = true
 				end
-				
-				Visibility.Interactable = true
-			end
-			
-			Main.AnchorPoint = Vector2.new(1, 0.5)
-			Main.Position = UDim2.new(0, 32, 0.5, 0)
-			
-			Update()
-			
-			Visibility.MouseButton1Click:Connect(function()
-				Toggle = not Toggle
-				
+
+				Main.AnchorPoint = Vector2.new(1, 0.5)
+				Main.Position = UDim2.new(0, 32, 0.5, 0)
+
 				Update()
-			end)
-			
+
+				Visibility.MouseButton1Click:Connect(function()
+					Main:SetAttribute("Toggle", not Main:GetAttribute("Toggle"))
+
+					Update()
+				end)
+
+				return Visibility
+			end
+
+			local function CreateContent()
+				local Task = {}
+
+				do
+					local Padding = Instance.new("UIPadding")
+					Padding.PaddingTop = UDim.new(0, 5)
+					Padding.PaddingRight = UDim.new(0, 5)
+					Padding.PaddingBottom = UDim.new(0, 5)
+					Padding.PaddingLeft = UDim.new(0, 5)
+
+					Padding.Parent = Display
+				end
+
+				local Active do
+					Active = Register("Button", "Active") :: TextButton
+					Active.Name = "ActiveButton"
+					Active.Text = Activated and "Deactive" or "Active"
+					Active.Size = UDim2.new(1, 0, 0, 32)
+					Active.Position = UDim2.fromScale(0, 1)
+					Active.AnchorPoint = Vector2.new(0, 1)
+
+					Active.Parent = Display
+				end
+
+				local Selector = Register("Box", nil, 0.05, Current, Current) :: SelectionBox
+				Selector.Name = "Selector"
+				Selector.Parent = Session
+
+				local RGBInput do
+					RGBInput = Register("Field", "", "(0-255), (0-255), (0-255)") :: TextBox
+					RGBInput.Name = "RGBInput"
+					RGBInput.TextColor3 = Option.Palette.Label
+					RGBInput.TextStrokeTransparency = 0.9
+					RGBInput.TextStrokeColor3 = Option.Palette.TextField
+					RGBInput.BackgroundColor3 = Current
+					RGBInput.Size = UDim2.new(1, 0, 0, 32)
+					RGBInput.Parent = Display
+
+					local function Input()
+						local Text = RGBInput.Text
+
+						if Text ~= "" then
+							local Format = "^(%d+) *,+ *(%d+) *,+ *(%d+)"
+							local A, B, C = Text:match( Format )
+
+							if A and B and C then
+								A = tonumber(A)
+								B = tonumber(B)
+								C = tonumber(C)
+
+								if tonumber(A) and tonumber(B) and tonumber(C) then
+
+									A = math.clamp( math.abs( math.floor(A) ), 0, 255 )
+									B = math.clamp( math.abs( math.floor(B) ), 0, 255 )
+									C = math.clamp( math.abs( math.floor(C) ), 0, 255 )
+
+									if typeof(A) == "number" and typeof(B) == "number" and typeof(C) == "number" then
+										local Updated = Color3.fromRGB(A, B, C)
+
+										Current = Updated
+
+										RGBInput.BackgroundColor3 = Current
+										RGBInput.Text = ("%s, %s, %s"):format( tostring(A),  tostring(B),  tostring(C))
+
+										if Selector then
+											Selector.Color3 = Current
+											Selector.SurfaceColor3 = Current
+										end
+									end
+								end
+							end
+						end
+					end
+
+					RGBInput:GetPropertyChangedSignal("Text"):Connect(Input)
+				end
+
+				local function Clicked()
+					local Stuff = workspace:WaitForChild("Active")
+					local Post = ReplicatedStorage:FindFirstChild("Post")
+
+					if not Active and not Post then return end
+
+					Activated = not Activated
+					Active.Text = Activated and "Deactive" or "Active"
+
+					Active.Interactable = false
+
+					if not HasTool() then
+
+						if Activated then
+							local Filter = RaycastParams.new()
+							Filter.FilterType = Enum.RaycastFilterType.Include
+							Filter.FilterDescendantsInstances = { Stuff }
+							Filter.IgnoreWater = true
+							Filter.RespectCanCollide = false
+
+							local function Move()
+
+								if not HasTool() then
+									local _, Result = Cast(2000, Filter)
+
+									if Result then
+										local Part = Result.Instance
+
+										if Part:IsA("BasePart") then
+											local Model = Part:FindFirstChildOfClass("Model")
+
+											if Model then
+												Selector.Adornee = Model
+											else
+												Selector.Adornee = Part
+											end
+										end
+									else
+										Selector.Adornee = nil
+									end
+								end
+							end
+
+							table.insert( Task, RunService.RenderStepped:Connect(function() 
+
+								if UserInputService.MouseEnabled then
+									Move()
+								end
+							end))
+
+							table.insert( Task, UserInputService.InputBegan:Connect(function(Input, Processed) 
+
+								if UserInputService.TouchEnabled then
+
+									if Input.UserInputType == Enum.UserInputType.Touch then
+										Move()
+									end
+								end
+
+								if not Processed then
+
+									if Input.UserInputType == Enum.UserInputType.Touch or Input.UserInputType == Enum.UserInputType.MouseButton1 then
+
+										if Activated and not HasTool() then
+
+											if Selector.Adornee then
+												Post:FireServer( "Paint", Selector.Adornee, Current )
+											end
+										end
+
+									end
+								end
+							end))
+
+							for _, Item in pairs( Task ) do
+
+								if not table.find( Connector, Item ) then
+									AddConnector( Item )
+								end
+							end
+						else
+
+							for _, Item in pairs( Task ) do
+
+								if table.find( Connector, Item ) then
+									RemoveConnector( Item )
+								end
+							end
+
+							table.clear( Task )
+						end
+					end
+
+					Active.Interactable = true
+				end
+
+				Active.MouseButton1Click:Connect( Clicked )
+			end
+
+			CreateVisibility()
+			CreateContent()
+
 			Session.Parent = Root
 		end
 	end
