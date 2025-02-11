@@ -9,7 +9,7 @@ local Player = game:GetService("Players").LocalPlayer
 
 -- Variable
 
-local Last = "v0.1α"
+local Last = "v0.2α"
 local Option = {
 	Standard = Enum.Font.SourceSans,
 
@@ -28,6 +28,7 @@ local Option = {
 	Palette = {
 		Label  = Color3.fromRGB(255, 255, 255),
 		TextField = Color3.fromRGB(32, 32, 32),
+		PlaceholderField = Color3.fromRGB(124, 124, 124),
 
 		Titlebar = Color3.fromRGB(56, 59, 60),
 		Sidebar = Color3.fromRGB(52, 54, 55),
@@ -42,7 +43,7 @@ local Option = {
 	},
 }
 
-local Current = Color3.fromRGB(255, 0, 0)
+local Current = nil
 
 local Connector = {}
 local Session
@@ -60,7 +61,9 @@ local Elements = {
 
 		Created = function(Argument : { any })
 			local Text = Argument[1] or "Button"
-			local Animated = Argument[2] or true
+			local Animated = Argument[2]
+			
+			if Animated == nil then Animated = true end
 
 			local Button = Instance.new("TextButton")
 			Button.Name = "Button"
@@ -112,7 +115,9 @@ local Elements = {
 
 		Created = function(Argument : {any})
 			local Text = Argument[1] or "Foo bar baz"
-			local Dimmed = Argument[2] or false
+			local Dimmed = Argument[2]
+			
+			if Dimmed == nil then Dimmed = false end
 
 			local Label = Instance.new("TextLabel")
 			Label.Name = "Label"
@@ -172,11 +177,13 @@ local Elements = {
 			Field.BorderColor3 = Color3.fromRGB(0, 0, 0)
 			Field.BorderSizePixel = 0
 			Field.TextColor3 = Option.Palette.TextField
+			Field.PlaceholderColor3 = Option.Palette.PlaceholderField
 			Field.TextScaled = true
 			Field.TextWrapped = true
 			Field.Font = Option.Standard
 			Field.Size = UDim2.fromOffset(124, 32)
 			Field.Text = Text
+			Field.PlaceholderText = Placeholder
 
 			local function Update()
 				local Interactable = Field.Interactable
@@ -342,7 +349,72 @@ local Elements = {
 			Selection.Adornee = Target
 
 			return Selection
-		end,
+		end
+	} :: Element,
+	
+	["Frame"] = {
+		Class = "Frame",
+		
+		Created = function(Argument : {any})
+			local Size = Argument[1] or UDim2.fromOffset(124, 124)
+			local Background = Argument[2] or Color3.fromRGB(255, 255, 255)
+			local Border = Argument[3] or Color3.fromRGB(0, 0, 0)
+			local Thickness = Argument[4] or 0
+			
+			local Frame = Instance.new("Frame")
+			Frame.Name = "Frame"
+			Frame.BackgroundColor3 = Background
+			Frame.BorderColor3 = Border
+			Frame.BorderSizePixel = Thickness
+			Frame.Size = Size
+			
+			return Frame
+		end
+	} :: Element,
+	
+	["Scrolling"] = {
+		Class = "Scrolling",
+
+		Created = function(Argument : {any})
+			local Size = Argument[1] or UDim2.fromOffset(124, 124)
+			local Scrollbar = Argument[2]
+			
+			if Scrollbar == nil then Scrollbar = true end
+			
+			local Scrolling = Instance.new("ScrollingFrame")
+			Scrolling.Name = "Scrolling"
+			Scrolling.Size = Size
+			Scrolling.BackgroundColor3 = Option.Palette.Background
+			Scrolling.BorderColor3 = Option.Palette.Outline
+			Scrolling.ScrollBarImageColor3 = Option.Palette.Scrollbar
+			Scrolling.ScrollBarThickness = Scrollbar and 5 or 0
+			Scrolling.AutomaticCanvasSize = Enum.AutomaticSize.Y
+			
+			Scrolling.TopImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
+			Scrolling.BottomImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
+			Scrolling.MidImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
+			
+			Scrolling.ScrollBarImageTransparency = 0
+			Scrolling.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
+			
+			return Scrolling
+		end
+	} :: Element,
+	["Padding"] = {
+		Class = "Padding",
+		
+		Created = function(Argument : {any})
+			local Size = Argument[1] or 5
+			
+			local Padding = Instance.new("UIPadding")
+			Padding.Name = "Padding"
+			Padding.PaddingBottom = UDim.new(0, Size)
+			Padding.PaddingLeft = UDim.new(0, Size)
+			Padding.PaddingRight = UDim.new(0, Size)
+			Padding.PaddingTop = UDim.new(0, Size)
+			
+			return Padding
+		end
 	} :: Element
 }
 
@@ -514,13 +586,19 @@ local function Init()
 
 				return Ratio
 			end
-
+			
+			
 			Session = Instance.new("ScreenGui")
 			Session.Name = ("__EXPAINTER_%d__"):format(Player.UserId)
 			Session.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 			Session.IgnoreGuiInset = false
 			Session.ResetOnSpawn = false
 			Session.DisplayOrder = 10
+			
+			Current = Instance.new("Color3Value")
+			Current.Name = "Current"
+			Current.Value = Color3.fromRGB(255, 0, 0)
+			Current.Parent = Session
 
 			local Main = Register("Dashboard")
 			Main.Parent = Session
@@ -588,40 +666,79 @@ local function Init()
 			local function CreateContent()
 				local Task = {}
 
-				do
-					local Padding = Instance.new("UIPadding")
-					Padding.PaddingTop = UDim.new(0, 5)
-					Padding.PaddingRight = UDim.new(0, 5)
-					Padding.PaddingBottom = UDim.new(0, 5)
-					Padding.PaddingLeft = UDim.new(0, 5)
+				-- Construction
 
-					Padding.Parent = Display
-				end
+				Register("Padding", 5).Parent = Display
 
 				local Active do
 					Active = Register("Button", "Active") :: TextButton
 					Active.Name = "ActiveButton"
 					Active.Text = Activated and "Deactive" or "Active"
-					Active.Size = UDim2.new(1, 0, 0, 32)
+					Active.Size = UDim2.new(1, -37, 0, 32)
 					Active.Position = UDim2.fromScale(0, 1)
 					Active.AnchorPoint = Vector2.new(0, 1)
 
 					Active.Parent = Display
 				end
+				
+				local Preview do
+					Preview = Register("Frame", UDim2.fromOffset(32, 32)) :: Frame
+					Preview.Name = "Preview"
+					Preview.BackgroundColor3 = Current.Value
+					Preview.BorderColor3 = Option.Palette.Outline
+					Preview.Position = UDim2.fromScale(1, 1)
+					Preview.AnchorPoint = Vector2.new(1, 1)
+					Preview.BorderSizePixel = 1
+					Preview.BorderMode = Enum.BorderMode.Inset
+					Square().Parent = Preview
+					Preview.Parent = Display
+					
+					local function Changed()
+						Preview.BackgroundColor3 = Current.Value
+					end
+					
+					Current:GetPropertyChangedSignal("Value"):Connect(Changed)
+					Preview.Parent = Display
+				end
 
-				local Selector = Register("Box", nil, 0.05, Current, Current) :: SelectionBox
-				Selector.Name = "Selector"
-				Selector.Parent = Session
-
+				local Selector do
+					Selector = Register("Box", nil, 0.05, Current.Value, Current.Value) :: SelectionBox
+					Selector.Name = "Selector"
+					Selector.Parent = Session
+					Selector.SurfaceTransparency = 0.75
+					
+					local function Updated()
+						Selector.Color3 = Current.Value
+						Selector.SurfaceColor3 = Current.Value
+					end
+					
+					Current:GetPropertyChangedSignal("Value"):Connect( Updated )
+				end
+				
+				local Scrolling do
+					Scrolling = Register("Scrolling", UDim2.new(1, 0, 1, -37) ) :: ScrollingFrame
+					Scrolling.BackgroundTransparency = 1
+					Scrolling.BorderSizePixel = 0
+					Scrolling.CanvasSize = UDim2.fromScale(0, 0)
+					Scrolling.Parent = Display
+					
+					local List = Instance.new("UIListLayout")
+					List.Name = "List"
+					List.FillDirection = Enum.FillDirection.Vertical
+					List.HorizontalAlignment = Enum.HorizontalAlignment.Left
+					List.VerticalAlignment = Enum.VerticalAlignment.Top
+					List.Padding = UDim.new(0, 5)
+					List.Parent = Scrolling
+				end
+				
+				-- Color Input
+				
 				local RGBInput do
 					RGBInput = Register("Field", "", "(0-255), (0-255), (0-255)") :: TextBox
 					RGBInput.Name = "RGBInput"
-					RGBInput.TextColor3 = Option.Palette.Label
-					RGBInput.TextStrokeTransparency = 0.9
-					RGBInput.TextStrokeColor3 = Option.Palette.TextField
-					RGBInput.BackgroundColor3 = Current
 					RGBInput.Size = UDim2.new(1, 0, 0, 32)
-					RGBInput.Parent = Display
+					RGBInput.Parent = Scrolling
+					RGBInput.LayoutOrder = 1
 
 					local function Input()
 						local Text = RGBInput.Text
@@ -644,23 +761,74 @@ local function Init()
 									if typeof(A) == "number" and typeof(B) == "number" and typeof(C) == "number" then
 										local Updated = Color3.fromRGB(A, B, C)
 
-										Current = Updated
-
-										RGBInput.BackgroundColor3 = Current
+										Current.Value = Updated
+										
 										RGBInput.Text = ("%s, %s, %s"):format( tostring(A),  tostring(B),  tostring(C))
-
-										if Selector then
-											Selector.Color3 = Current
-											Selector.SurfaceColor3 = Current
-										end
 									end
 								end
 							end
 						end
 					end
-
+					
+					local function Update()
+						
+						if not RGBInput:IsFocused() then
+							local R, G, B = Current.Value.R, Current.Value.G, Current.Value.B
+							
+							R = math.clamp( math.abs( math.floor(R * 255) ), 0, 255 )
+							G = math.clamp( math.abs( math.floor(G * 255) ), 0, 255 )
+							B = math.clamp( math.abs( math.floor(B * 255) ), 0, 255 )
+							
+							RGBInput.Text = ("%s, %s, %s"):format( tostring(R),  tostring(G),  tostring(B))
+						end
+					end
+					
+					Current:GetPropertyChangedSignal("Value"):Connect(Update)
 					RGBInput:GetPropertyChangedSignal("Text"):Connect(Input)
 				end
+				
+				local HEXInput do
+					HEXInput = Register("Field", "", "#FFFFFF") :: TextBox
+					HEXInput.Name = "HEXInput"
+					HEXInput.Size = UDim2.new(1, 0, 0, 32)
+					HEXInput.Parent = Scrolling
+					HEXInput.LayoutOrder = 2
+
+					local function Input()
+						local Text = HEXInput.Text
+
+						if Text ~= "" then
+							local Format = "^#?(%x%x%x%x%x%x)"
+							local HEX = Text:match(Format)
+
+							if HEX then
+								HEX = HEX:lower()
+								
+								local Success, Result = pcall(function()
+									Current.Value = Color3.fromHex( HEX )
+								end)
+								
+								if Success then
+									HEXInput.Text = string.format( "#%s", Current.Value:ToHex():upper() )
+								end
+							end
+						end
+					end
+
+					local function Update()
+
+						if not HEXInput:IsFocused() then
+							local HEX = Current.Value:ToHex()
+							
+							HEXInput.Text = ("#%s"):format( HEX:upper() )
+						end
+					end
+
+					Current:GetPropertyChangedSignal("Value"):Connect(Update)
+					HEXInput:GetPropertyChangedSignal("Text"):Connect(Input)
+				end
+
+				-- Selector function
 
 				local function Clicked()
 					local Stuff = workspace:WaitForChild("Active")
@@ -691,7 +859,7 @@ local function Init()
 										local Part = Result.Instance
 
 										if Part:IsA("BasePart") then
-											local Model = Part:FindFirstChildOfClass("Model")
+											local Model = Part:FindFirstAncestorOfClass("Model")
 
 											if Model then
 												Selector.Adornee = Model
@@ -728,7 +896,7 @@ local function Init()
 										if Activated and not HasTool() then
 
 											if Selector.Adornee then
-												Post:FireServer( "Paint", Selector.Adornee, Current )
+												Post:FireServer( "Paint", Selector.Adornee, Current.Value )
 											end
 										end
 
