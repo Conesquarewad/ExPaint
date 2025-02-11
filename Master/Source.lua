@@ -921,6 +921,8 @@ local function Init()
 
 							table.clear( Task )
 						end
+					else
+						Selector.Adornee = nil
 					end
 
 					Active.Interactable = true
