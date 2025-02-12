@@ -9,7 +9,7 @@ local Player = game:GetService("Players").LocalPlayer
 
 -- Variable
 
-local Last = "v0.2α"
+local Last = "v0.29α"
 local Option = {
 	Standard = Enum.Font.SourceSans,
 
@@ -48,11 +48,28 @@ local Current = nil
 local Connector = {}
 local Session
 
+local Status = {
+	Tool = Instance.new("StringValue"),
+	Size = Instance.new("NumberValue")
+}
+
 -- Registry
 
 type Element = {
 	Class : string,
 	Created : (Argument : { any }) -> Instance,
+}
+
+type ColorRegistry = {
+	Type : string,
+	Order : number?,
+
+	Pattern : string,
+	Format : string,
+	Helper : string?,
+
+	Updated : (Format : string, Color : Color3) -> string,
+	OnChanged : (Argument : {string}) -> Color3,
 }
 
 local Elements = {
@@ -310,6 +327,7 @@ local Elements = {
 				List.Name = "List"
 				List.Padding = UDim.new(0, 0)
 				List.FillDirection = Enum.FillDirection.Vertical
+				List.SortOrder = Enum.SortOrder.LayoutOrder
 				List.HorizontalAlignment = Enum.HorizontalAlignment.Left
 				List.VerticalAlignment = Enum.VerticalAlignment.Top
 				List.Parent = Sidebar
@@ -587,7 +605,6 @@ local function Init()
 				return Ratio
 			end
 
-
 			Session = Instance.new("ScreenGui")
 			Session.Name = ("__EXPAINTER_%d__"):format(Player.UserId)
 			Session.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -595,13 +612,37 @@ local function Init()
 			Session.ResetOnSpawn = false
 			Session.DisplayOrder = 10
 
+			local Node do
+				Node = Instance.new("Part")
+				Node.Name = "__EXPAINTER_NODE__"
+				Node.Size = Vector3.new(1, 1, 1)
+				Node.CFrame = CFrame.new()
+				Node.Anchored = true
+				Node.CanCollide = false
+				Node.CastShadow = false
+				Node.Transparency = 1
+				Node.Locked = true
+				Node.Parent = Session
+			end
+
+			do 
+				Status.Size.Name = "BrushSize"
+				Status.Size.Value = 2
+				Status.Size.Parent = Session
+
+				Status.Tool.Name = "Tool"
+				Status.Tool.Value = "Pencil"
+				Status.Tool.Parent = Session
+			end
+
 			Current = Instance.new("Color3Value")
 			Current.Name = "Current"
 			Current.Value = Color3.fromRGB(255, 0, 0)
 			Current.Parent = Session
 
-			local Main = Register("Dashboard")
+			local Main = Register("Dashboard", "<b><i>Ex</i></b>Painter", Vector2.new(325, 225))
 			Main.Parent = Session
+
 
 			local Activated = false
 
@@ -613,6 +654,7 @@ local function Init()
 				local Visibility = Register("Button", "<", false) :: TextButton
 				Visibility.Name = "Visibility"
 				Visibility.BackgroundTransparency = 1
+				Visibility.LayoutOrder = -1
 				Visibility.Size = UDim2.fromScale(1, 1)
 
 				Square().Parent = Visibility
@@ -661,6 +703,73 @@ local function Init()
 				end)
 
 				return Visibility
+			end
+			
+			
+			local function CreateSidebarButton(Text : string, Order : number?)
+				Order = Order or 1
+				
+				local Button = Register("Button", Text, true) :: TextButton
+				Button.Name = Text
+				Button.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+				Button.BackgroundTransparency = 1
+				Button.Size = UDim2.fromScale(1, 1)
+				Button.LayoutOrder = Order
+				
+				Square().Parent = Button
+				Button.Parent = Main.Sidebar
+				
+				return Button
+			end
+			
+			local function CreateToolbar()
+				local Sidebar = Main:FindFirstChild("Sidebar")
+				
+				local Brush = CreateSidebarButton("Brush", 2)
+				Brush.Text = "B!"
+				Brush:AddTag("Toolbar")
+				
+				local Pencil = CreateSidebarButton("Pencil", 1)
+				Pencil.Text = "P!"
+				Pencil:AddTag("Toolbar")
+				
+				Brush.MouseButton1Click:Connect(function()
+					Status.Tool.Value = "Brush"
+				end)
+				
+				Pencil.MouseButton1Click:Connect(function()
+					Status.Tool.Value = "Pencil"
+				end)
+				
+				local function Changed()
+					local Value = Status.Tool.Value
+					
+					for _, Button in pairs( Sidebar:GetChildren() ) do
+						
+						if Button:IsA("GuiButton") then
+							
+							if Button.Name:lower() == Value:lower() then
+								
+								local Tween = TweenService:Create(Button, Option.Easing.Medium, {
+									BackgroundTransparency = 0.75
+								})
+								
+								Tween:Play()
+							else
+								
+								local Tween = TweenService:Create(Button, Option.Easing.Medium, {
+									BackgroundTransparency = 1
+								})
+
+								Tween:Play()
+							end
+						end
+					end
+				end
+				
+				Changed()
+				
+				Status.Tool:GetPropertyChangedSignal("Value"):Connect(Changed)
 			end
 
 			local function CreateContent()
@@ -715,6 +824,36 @@ local function Init()
 					Current:GetPropertyChangedSignal("Value"):Connect( Updated )
 				end
 
+				local Circle do
+					Circle = Instance.new("SphereHandleAdornment")
+					Circle.Name = "BrushScale"
+					Circle.Transparency = 0.95
+					Circle.AlwaysOnTop = false
+					Circle.Visible = false
+					Circle.Adornee = Node
+					Circle.Radius = Status.Size.Value
+					Circle.Color3 = Current.Value
+					Circle.ZIndex = 1
+					Circle.Parent = Session
+
+					local function Changed(Type : string )
+
+						if Type:lower() == "size" then
+							Circle.Radius = ( Status.Size.Value * 4 )
+						elseif Type:lower() == "color" then
+							Circle.Color3 = Current.Value
+						end
+					end
+
+					Status.Size:GetPropertyChangedSignal("Value"):Connect(function()
+						Changed("size")
+					end)
+
+					Current:GetPropertyChangedSignal("Value"):Connect(function()
+						Changed("size")
+					end)
+				end
+
 				local Scrolling do
 					Scrolling = Register("Scrolling", UDim2.new(1, 0, 1, -37) ) :: ScrollingFrame
 					Scrolling.BackgroundTransparency = 1
@@ -733,102 +872,229 @@ local function Init()
 
 				-- Color Input
 
-				local RGBInput do
-					RGBInput = Register("Field", "", "(0-255), (0-255), (0-255)") :: TextBox
-					RGBInput.Name = "RGBInput"
-					RGBInput.Size = UDim2.new(1, 0, 0, 32)
-					RGBInput.Parent = Scrolling
-					RGBInput.LayoutOrder = 1
+				local ColorModels = {
+					RGB = {
+						Type = "RGB",
+						Order = 1,
 
-					local function Input()
-						local Text = RGBInput.Text
+						Pattern = "(%d+) *,? *(%d+) *,? *(%d+)",
+						Format = "%s, %s, %s",
+						Helper = "(0-255), (0-255), (0-255)",
 
-						if Text ~= "" then
-							local Format = "^(%d+) *,+ *(%d+) *,+ *(%d+)"
-							local A, B, C = Text:match( Format )
+						OnChanged = function(Argument : {string})
+							local R = Argument[1]
+							local G = Argument[2]
+							local B = Argument[3]
 
-							if A and B and C then
-								A = tonumber(A)
+							if R and G and B then
+								R = tonumber(R)
+								G = tonumber(G)
 								B = tonumber(B)
-								C = tonumber(C)
 
-								if tonumber(A) and tonumber(B) and tonumber(C) then
+								R = math.clamp( math.abs( math.floor(R) ), 0, 255 )
+								G = math.clamp( math.abs( math.floor(G) ), 0, 255 )
+								B = math.clamp( math.abs( math.floor(B) ), 0, 255 )
 
-									A = math.clamp( math.abs( math.floor(A) ), 0, 255 )
-									B = math.clamp( math.abs( math.floor(B) ), 0, 255 )
-									C = math.clamp( math.abs( math.floor(C) ), 0, 255 )
+								return Color3.fromRGB(R, G, B)
+							else
+								return nil
+							end
+						end,
 
-									if typeof(A) == "number" and typeof(B) == "number" and typeof(C) == "number" then
-										local Updated = Color3.fromRGB(A, B, C)
+						Updated = function(Format : string, Color : Color3)
+							local R, G, B = Color.R, Color.G, Color.B
 
-										Current.Value = Updated
+							if R and G and B then
+								R = math.clamp( math.abs( math.floor(R * 255) ), 0, 255 )
+								G = math.clamp( math.abs( math.floor(G * 255) ), 0, 255 )
+								B = math.clamp( math.abs( math.floor(B * 255) ), 0, 255 )
 
-										RGBInput.Text = ("%s, %s, %s"):format( tostring(A),  tostring(B),  tostring(C))
+								return Format:format(tostring(R), tostring(G), tostring(B))
+							else
+								return nil
+							end
+
+						end
+					} :: ColorRegistry,
+					HEX = {
+						Type = "HEX",
+						Order = 2,
+
+						Pattern = "#?(%x%x%x%x%x%x)",
+						Format = "#%s",
+						Helper = "#FFFFFF",
+
+						OnChanged = function(Argument : {string})
+							local HEX = Argument[1]
+
+							if HEX then
+								HEX = HEX:upper()
+
+								local Success, Result = pcall(function()
+									return Color3.fromHex( HEX )
+								end)
+
+								if Success then
+									return Result
+								else
+									return nil
+								end
+							else
+								return nil
+							end
+						end,
+
+						Updated = function(Format : string, Color : Color3)
+							local HEX = Color:ToHex()
+
+							return Format:format( HEX:upper() )
+						end
+					} :: ColorRegistry,
+					HSV = {
+						Type = "HSV",
+						Order = 3,
+
+						Pattern = "(%d+) *,? *(%d+) *,? *(%d+)",
+						Format = "%s, %s, %s",
+						Helper = "(0-358), (0-255), (0-255)",
+
+						OnChanged = function(Argument : {string})
+							local H = Argument[1]
+							local S = Argument[2]
+							local V = Argument[3]
+
+							if H and S and V then
+								H = tonumber(H)
+								S = tonumber(S)
+								V = tonumber(V)
+
+								H = math.clamp( math.abs( math.floor(H / 358) ), 0, 1 )
+								S = math.clamp( math.abs( math.floor(S / 255) ), 0, 1 )
+								V = math.clamp( math.abs( math.floor(V / 255) ), 0, 1 )
+
+								return Color3.fromHSV(H, S, V)
+							else
+								return nil
+							end
+						end,
+
+						Updated = function(Format : string, Color : Color3)
+							local H, S, V = Color:ToHSV()
+
+							if H and S and V then
+								H = math.clamp( math.abs( math.floor(H * 358) ), 0, 358 )
+								S = math.clamp( math.abs( math.floor(S * 255) ), 0, 255 )
+								V = math.clamp( math.abs( math.floor(V * 255) ), 0, 255 )
+
+								return Format:format(tostring(H), tostring(S), tostring(V))
+							else
+								return nil
+							end
+
+						end
+					} :: ColorRegistry
+				}
+
+				for Index, Model : ColorRegistry in pairs( ColorModels ) do
+
+					if typeof(Model) == "table" then
+						local Main = Register("Frame", UDim2.new(1, 0, 0, 32)) :: Frame
+						Main.Name = Model.Type .. "Input"
+						Main.BackgroundTransparency = 1
+						Main.LayoutOrder = Model.Order or 0
+
+						local Label = Register("Label", Model.Type) :: TextLabel
+						Label.Name = "Label"
+						Label.Size = UDim2.fromScale(0.2, 1)
+						Label.Parent = Main
+
+						local Field = Register("Field", "", Model.Helper or "") :: TextBox
+						Field.Name = "Input"
+						Field.ClearTextOnFocus = false
+						Field.Size = UDim2.fromScale(0.8, 1)
+						Field.Position = UDim2.fromScale(1, 0)
+						Field.AnchorPoint = Vector2.new(1, 0)
+						Field.Parent = Main
+
+						local function Changed()
+
+							local Source = Field.Text
+
+							if Source ~= "" then
+								local Argument = { string.match( Source, Model.Pattern ) }
+
+								local A = Model.OnChanged( Argument )
+
+								if A then
+									Current.Value = A
+
+									local B = Model.Updated(Model.Format, Current.Value)
+
+									if B then
+										Field.Text = B
 									end
 								end
 							end
 						end
-					end
 
-					local function Update()
+						local function Updated()
 
-						if not RGBInput:IsFocused() then
-							local R, G, B = Current.Value.R, Current.Value.G, Current.Value.B
+							if not Field:IsFocused() then
+								local B = Model.Updated(Model.Format, Current.Value)
 
-							R = math.clamp( math.abs( math.floor(R * 255) ), 0, 255 )
-							G = math.clamp( math.abs( math.floor(G * 255) ), 0, 255 )
-							B = math.clamp( math.abs( math.floor(B * 255) ), 0, 255 )
-
-							RGBInput.Text = ("%s, %s, %s"):format( tostring(R),  tostring(G),  tostring(B))
-						end
-					end
-
-					Current:GetPropertyChangedSignal("Value"):Connect(Update)
-					RGBInput:GetPropertyChangedSignal("Text"):Connect(Input)
-				end
-
-				local HEXInput do
-					HEXInput = Register("Field", "", "#FFFFFF") :: TextBox
-					HEXInput.Name = "HEXInput"
-					HEXInput.Size = UDim2.new(1, 0, 0, 32)
-					HEXInput.Parent = Scrolling
-					HEXInput.LayoutOrder = 2
-
-					local function Input()
-						local Text = HEXInput.Text
-
-						if Text ~= "" then
-							local Format = "^#?(%x%x%x%x%x%x)"
-							local HEX = Text:match(Format)
-
-							if HEX then
-								HEX = HEX:lower()
-
-								local Success, Result = pcall(function()
-									Current.Value = Color3.fromHex( HEX )
-								end)
-
-								if Success then
-									HEXInput.Text = string.format( "#%s", Current.Value:ToHex():upper() )
+								if B then
+									Field.Text = B
 								end
 							end
 						end
+						
+						Updated()
+
+						Field.FocusLost:Connect(function(Enter)
+							if Enter then Changed() end
+						end)
+						Current:GetPropertyChangedSignal("Value"):Connect(Updated)
+
+						Main.Parent = Scrolling
 					end
-
-					local function Update()
-
-						if not HEXInput:IsFocused() then
-							local HEX = Current.Value:ToHex()
-
-							HEXInput.Text = ("#%s"):format( HEX:upper() )
+				end
+				
+				-- TEMPORARY BRUSH SIZE
+				
+				local SizeField do
+					SizeField = Register("Field", "", "Size (1-8)") :: TextBox
+					SizeField.Name = "BrushSizeField"
+					SizeField.Text = tostring( Status.Size.Value )
+					SizeField.Size = UDim2.new(1, 0, 0, 32)
+					SizeField.LayoutOrder = 100
+					SizeField.ClearTextOnFocus = false
+					
+					
+					local function Changed()
+						local Source = SizeField.Text
+						
+						if Source ~= "" then
+							
+							if tonumber(Source) then
+								local A = tonumber(Source)
+								
+								A = math.clamp( math.floor( A ), 1, 8 )
+								
+								Status.Size.Value = A
+								
+								SizeField.Text = A
+							end
 						end
 					end
-
-					Current:GetPropertyChangedSignal("Value"):Connect(Update)
-					HEXInput:GetPropertyChangedSignal("Text"):Connect(Input)
+					
+					SizeField:GetPropertyChangedSignal("Text"):Connect(Changed)
+					SizeField.Parent = Scrolling
 				end
 
 				-- Selector function
+
+				local Down = false
+				local Selected = {}
 
 				local function Clicked()
 					local Stuff = workspace:WaitForChild("Active")
@@ -841,77 +1107,122 @@ local function Init()
 
 					Active.Interactable = false
 
+					Down = false
+
+					Selector.Adornee = nil
+					Circle.Visible = false
+
 					if not HasTool() then
 
 						if Activated then
-							local Filter = RaycastParams.new()
-							Filter.FilterType = Enum.RaycastFilterType.Include
-							Filter.FilterDescendantsInstances = { Stuff }
-							Filter.IgnoreWater = true
-							Filter.RespectCanCollide = false
 
-							local function Move()
+							local function Paint(Collection : {PVInstance})
 
-								if not HasTool() then
-									local _, Result = Cast(2000, Filter)
+								for _, Item in pairs( Collection ) do
+									Post:FireServer( "Paint", Item, Current.Value )
+								end
+							end
 
-									if Result then
-										local Part = Result.Instance
+							local function Move(Mode : string)
+								Mode = Mode:lower()
 
-										if Part:IsA("BasePart") then
-											local Model = Part:FindFirstAncestorOfClass("Model")
+								Selector.Adornee = nil
+								Circle.Visible = false
 
-											if Model then
-												Selector.Adornee = Model
-											else
-												Selector.Adornee = Part
+								table.clear(Selected)
+
+								local CastFilter = RaycastParams.new()
+								CastFilter.FilterType = Enum.RaycastFilterType.Include
+								CastFilter.FilterDescendantsInstances = { workspace }
+								CastFilter.IgnoreWater = false
+								CastFilter.RespectCanCollide = false
+
+								local OverlapFilter = OverlapParams.new()
+								OverlapFilter.FilterType = Enum.RaycastFilterType.Include
+								OverlapFilter.FilterDescendantsInstances = { Stuff }
+								OverlapFilter.RespectCanCollide = false
+
+								local Position, Result = Cast(2000, CastFilter)
+
+								if Result then
+									local Hitted = Result.Instance
+
+									if Hitted:IsA("BasePart") then
+										local function GetModel(Part : BasePart)
+											return Part:FindFirstAncestorOfClass("Model") or Part
+										end
+
+
+										if Mode == "brush" then
+											Circle.Visible = true
+											Circle.CFrame = CFrame.new( Position )
+											
+											local Overlap = workspace:GetPartBoundsInRadius( Position, Circle.Radius, OverlapFilter )
+											
+											if #Overlap > 0 then
+												
+												for _, Item in pairs( Overlap ) do
+													
+													if Item:IsA("BasePart") then
+														local Model = GetModel( Item )
+														
+														if Model and Model:IsDescendantOf( Stuff ) then
+															
+															if not table.find( Selected, Model ) then
+																table.insert( Selected, Model )
+															else
+																continue
+															end
+														end
+													end
+												end
+											end
+										elseif Mode == "pencil" then
+											
+											if Hitted:IsDescendantOf( Stuff ) then
+												Hitted = GetModel( Hitted )
+	
+												Selector.Adornee = Hitted
+	
+												table.insert( Selected, Hitted )
 											end
 										end
-									else
-										Selector.Adornee = nil
 									end
 								end
 							end
 
+
 							table.insert( Task, RunService.RenderStepped:Connect(function() 
+								Move( Status.Tool.Value )
 
-								if UserInputService.MouseEnabled then
-									Move()
+								if Down then
+									Paint( Selected )
 								end
-							end))
+							end) )
 
-							table.insert( Task, UserInputService.InputBegan:Connect(function(Input, Processed) 
+							table.insert( Task, UserInputService.InputBegan:Connect(function(Input, Event) 
 
-								if UserInputService.TouchEnabled then
-
-									if Input.UserInputType == Enum.UserInputType.Touch then
-										Move()
-									end
+								if Input.UserInputType == Enum.UserInputType.Touch or Input.UserInputType == Enum.UserInputType.MouseButton1 then
+									Down = true
 								end
+							end) )
 
-								if not Processed then
+							table.insert( Task, UserInputService.InputEnded:Connect(function(Input, Event) 
 
-									if Input.UserInputType == Enum.UserInputType.Touch or Input.UserInputType == Enum.UserInputType.MouseButton1 then
-
-										if Activated and not HasTool() then
-
-											if Selector.Adornee then
-												Post:FireServer( "Paint", Selector.Adornee, Current.Value )
-											end
-										end
-
-									end
+								if Input.UserInputType == Enum.UserInputType.Touch or Input.UserInputType == Enum.UserInputType.MouseButton1 then
+									Down = false
 								end
-							end))
+							end) )
+
 
 							for _, Item in pairs( Task ) do
 
-								if not table.find( Connector, Item ) then
+								if not table.find(Connector, Item) then
 									AddConnector( Item )
 								end
 							end
 						else
-							Selector.Adornee = nil
+
 
 							for _, Item in pairs( Task ) do
 
@@ -922,8 +1233,6 @@ local function Init()
 
 							table.clear( Task )
 						end
-					else
-						Selector.Adornee = nil
 					end
 
 					Active.Interactable = true
@@ -934,6 +1243,7 @@ local function Init()
 
 			CreateVisibility()
 			CreateContent()
+			CreateToolbar()
 
 			Session.Parent = Root
 		end
