@@ -25,7 +25,7 @@ You can copy this code and paste it into your Executor such as **[Xeno](https://
 --    ░    ░    ░  ░░         ░   ▒    ▒ ░   ░   ░ ░   ░         ░     ░░   ░ 
 --    ░  ░ ░    ░                 ░  ░ ░           ░             ░  ░   ░     
 
-local URL = "https://raw.githubusercontent.com/Conesquarewad/ExPaint/refs/heads/main/Master/Main.lua"
+local URL = "https://raw.githubusercontent.com/Conesquarewad/ExPainter/refs/heads/main/Master/Main.lua"
 
 local Success, Result = pcall(function()
     return loadstring( game:HttpGet( URL ) )
