@@ -35,6 +35,8 @@ if Success then
     Result()
 else
     error("Your envrionment does not supported loadstring() Please use a different executor")
+    error("--[ More information for DEBUGGING]--")
+    error( tostring( Result ) )
 end
 ```
 
