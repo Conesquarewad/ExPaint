@@ -7,7 +7,7 @@ ExPainter (Stylish: ***Ex*Painter**) is a utility script for [BASF](https://www.
 
 |  Function | Required |          Description                 |
 | :--------------:  | :--: | :----------------------------- |
-|  `setclipboard()` or `toclipboard` | ⏺️ | Used for copy to Clipboard |
+|  `setclipboard()` or `toclipboard()` | ⏺️ | Used for copy to Clipboard |
 |  `loadstring()`     | ⭐ | This function is important for loading the **Main.lua** and other components in the script  |
 
 
