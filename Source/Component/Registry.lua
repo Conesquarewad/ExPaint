@@ -12,15 +12,15 @@ export type Element = {
 
 export type Classes = 
 	| "Button"
-| "Field"
-| "Label"
-| "Scroll"
+	| "Field"
+	| "Label"
+	| "Scroll"
 -- INDEV | "Checkbox"
-| "Spinner"
+	| "Spinner"
 -- INDEV | "Dropdown"
 -- INDEV | "ToggleSwitch"
-| "ProgressBar"
-| "Dashboard"
+	| "ProgressBar"
+	| "Dashboard"
 
 export type Theme = {
 	Standard : Font,
